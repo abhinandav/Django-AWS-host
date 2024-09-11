@@ -1,0 +1,117 @@
+sudo apt update
+sudo apt install python3-venv python3-dev libpq-dev postgresql postgresql-contrib nginx curl
+
+
+// postgresql
+
+sudo -u postgres psql
+CREATE DATABASE myproject;
+CREATE USER myprojectuser WITH PASSWORD 'password';
+GRANT ALL PRIVILEGES ON DATABASE myproject TO myprojectuser;
+GRANT ALL PRIVILEGES ON  schema TO myprojectuser;
+\q
+
+
+// virtual env
+
+python3 -m venv myprojectenv
+source myprojectenv/bin/activate
+
+//git clone
+
+git clone ....
+intsall requirements
+pip install django gunicorn psycopg2-binary
+migrate
+collectstatic
+
+
+// gunicorn
+
+gunicorn --bind 12.0.0.0.0:9090 projectname.wsgi  # for testing
+
+//gunicorn socket
+
+sudo nano /etc/systemd/system/gunicorn.socket
+
+
+----------------
+[Unit]
+Description=gunicorn socket
+
+[Socket]
+ListenStream=/run/gunicorn.sock
+
+[Install]
+WantedBy=sockets.target
+---------------------
+
+
+
+// gunicorn service
+sudo nano /etc/systemd/system/gunicorn.service
+
+-------
+[Service]
+User=sammy
+Group=www-data
+WorkingDirectory=/home/sammy/myprojectdir
+ExecStart=/home/sammy/myprojectdir/myprojectenv/bin/gunicorn \
+          --access-logfile - \
+          --workers 3 \
+          --bind unix:/run/gunicorn.sock \
+          myproject.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
+-------
+
+
+sudo systemctl start gunicorn.socket
+sudo systemctl enable gunicorn.socket
+sudo systemctl status gunicorn.socket
+
+sudo journalctl -u gunicorn.socket
+
+
+file /run/gunicorn.sock
+sudo systemctl status gunicorn
+
+curl --unix-socket /run/gunicorn.sock localhost -- will get a html
+
+sudo journalctl -u gunicorn
+sudo systemctl daemon-reload
+sudo systemctl restart gunicorn
+
+
+// nginx
+
+sudo nano /etc/nginx/sites-available/myproject
+
+
+---------------
+server {
+    listen 80;
+    server_name server_domain_or_IP;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location /static/ {
+        root /home/sammy/myprojectdir;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.sock;
+    }
+}
+
+
+---------------
+
+sudo ln -s /etc/nginx/sites-available/myproject /etc/nginx/sites-enabled
+sudo nginx -t
+sudo systemctl restart nginx
+
+
+sudo ufw delete allow 8000
+sudo ufw allow 'Nginx Full'
