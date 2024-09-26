@@ -1,3 +1,13 @@
+'''  
+
+gunicorn :- https://www.digitalocean.com/community/tutorials/how-to-set-up-django-with-postgres-nginx-and-gunicorn-on-ubuntu
+
+Uvicorn  :- https://www.digitalocean.com/community/tutorials/how-to-set-up-an-asgi-django-app-with-postgres-nginx-and-uvicorn-on-ubuntu-20-04
+
+
+'''
+
+
 sudo apt update
 sudo apt install python3-venv python3-dev libpq-dev postgresql postgresql-contrib nginx curl
 
@@ -117,7 +127,208 @@ sudo ufw delete allow 8000
 sudo ufw allow 'Nginx Full'
 
 
-
-
-
 sudo usermod -a -G ubuntu www-data
+
+
+
+
+
+ASGI
+----
+
+
+
+Hosting React on AWS Amplify:
+Youtube Video
+Creating EC2 instance:
+create a key pair and save it
+Key Pair Type : RSA
+File format : .pem
+Network settings
+ Allow SSH traffic from			Change Anywhere(0.0.0.0/0) to My IP
+
+ Allow HTTPS traffic from the internet
+
+ Allow HTTP traffic from the internet
+
+
+
+Digital Ocean Documentation
+In the documentation in Step 4 — Creating and Configuring a New Django Project
+Don’t create a new project (Creating the Django Project
+) clone your existing project from git,
+Change database if you want. And continue from Completing Initial Project Setup
+
+
+To add DNS:
+1.	Purchase a domain.
+2.	Go to the site where you purchased the domain, go to page DNS / Name Servers (Edit or Add) and Add Record.
+type: A
+Name: @
+Points to: EC2 Public IPv4 address (e.g.: 17.160.253.180)
+TTL (Time to Live): Add time (e.g.: 14400 seconds) 
+
+{Time to live (TTL) refers to the amount of time or “hops” that a packet is set to exist inside a network before being discarded by a router. TTL is also used in other contexts including CDN caching and DNS caching.}
+
+3.	sudo nano /etc/nginx/sites-available/myproject
+
+server {
+    listen 80;
+    server_name yourdomainname.com www.yourdomainname.com;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location /static/ {
+        root /home/sammy/myprojectdir;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.sock;
+    }
+}
+
+4.	To make DNS secure (http to https).
+
+sudo add-apt-repository ppa:certbot/certbot
+sudo apt-get update
+sudo apt-get install python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+
+
+
+
+
+
+sudo certbot --nginx -d insyncbackend.arunkrishna.online -d www.insyncbackend.arunkrishna.online
+
+
+
+
+
+
+
+
+
+5.	To Connect With WS(Web Socket)  Server.
+
+server {
+    server_name yourdomain.com www.yourdomain.com;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location /static/ {
+        root /home/ubuntu/insyncbackend1;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.sock;
+    }
+
+    location /ws/ {
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_redirect off;
+    proxy_pass http://127.0.0.1:8001;
+    }
+
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+}
+server {
+    if ($host = www.yourdomain.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = yourdomain.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+    listen 80;
+    server_name yourdomain.com www.yourdomain.com;
+    return 404; # managed by Certbot
+
+
+}
+
+
+6.	Open settings.py and add
+
+CHANNEL_LAYERS = {
+    'default': {
+       'BACKEND': 'channels_redis.core.RedisChannelLayer',
+       'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
+7.	Open EC2 inbound rule add a new rule
+Type: Custom TCP
+Port range: 6379
+Source: Custom 0.0.0.0/0
+
+8.	sudo systemctl restart nginx
+
+9.	Run Daphne in the Foreground:
+
+daphne backend.asgi:application --port 8001
+Observe the output for any error messages or issues.
+
+pip install channels_redis
+
+Check Redis Server Status
+sudo systemctl status redis
+sudo systemctl start redis
+
+Test Redis Connection
+redis-cli ping
+
+Install Redis if it does not exist
+sudo apt-get update
+sudo apt-get install redis-server
+
+If Redis is not running, you can start it with
+redis-server
+
+Check Redis Process:
+ps aux | grep redis-server
+
+run daphne again
+daphne backend.asgi:application --port 8001
+
+
+
+
+CREATING SERVICE FOR DAPHNE
+
+sudo nano /etc/systemd/system/daphne.service
+
+
+[Unit]
+Description=Daphne ASGI Server
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/insyncbackend1
+ExecStart=/home/ubuntu/venv/bin/daphne insyncbackend.asgi:application --port 8001
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+sudo systemctl daemon-reload
+sudo systemctl enable daphne.service
+sudo systemctl start daphne.service
