@@ -1,0 +1,196 @@
+[Unit]
+Description=gunicorn daemon
+Requires=gunicorn.socket
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/Toeman-HOST
+ExecStart=/home/ubuntu/myprojectenv/bin/gunicorn \
+          --access-logfile - \
+          --workers 3 \
+          --bind unix:/run/gunicorn.sock \
+          mainproject.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+server {
+    listen 80;
+    server_name file.toeman.online www.file.toeman.online;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location /static/ {
+        root /home/ubuntu/TicketManagementSystem-Backend;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.sock;
+    }
+}
+
+
+django
+psycopg2-binary
+ python-dateutil
+pillow
+
+
+
+
+---------------------
+
+
+store.toeman.online www.store.toeman.online
+
+source myprojectenv/bin/activate
+cd TicketManagementSystem-Backend 
+
+
+
+pip install django-cors-headers djangorestframework djangorestframework-simplejwt
+
+
+sudo -u postgres psql
+
+GRANT ALL PRIVILEGES ON DATABASE myproject TO myprojectuser;
+GRANT ALL PRIVILEGES ON SCHEMA public TO myprojectuser;
+ALTER USER myprojectuser WITH SUPERUSER;
+
+\q
+
+
+sudo certbot --nginx -d hatio.toeman.online -d www.hatio.toeman.online
+
+sudo usermod -a -G ubuntu www-data
+
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+
+
+
+
+ssh -i "project.pem"ubuntu@13.49.74.56
+
+
+sudo apt install python3-venv libpq-dev postgresql postgresql-contrib nginx curl
+
+
+http://13.49.74.56:8000
+
+pip install django gunicorn uvicorn psycopg2-binary pillow environ razorpay django-cors-headers djangorestframework-simplejwt opencv-python-headless 
+pip install channels==3.0.4
+pip install channels-redis==4.2.0
+
+pip install django-environ daphne-3.0.2
+
+pip install opencv-python
+
+
+pip install django-cors-headers
+pip install djangorestframework-simplejwt
+
+pip install opencv-python-headless
+sudo apt-get install libgl1-mesa-glx
+
+pip install razorpay
+
+
+
+if opencv error
+-------------
+sudo apt-get update
+sudo apt-get install libgl1
+ls -l /usr/lib/x86_64-linux-gnu/libGL.so.1
+
+----------------------------------------------------
+[Unit]
+Description=gunicorn daemon
+Requires=gunicorn.socket
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/SkillBridge-Backend
+ExecStart=/home/ubuntu/myprojectenv/bin/gunicorn \
+          --access-logfile - \
+          -k uvicorn.workers.UvicornWorker \
+          --workers 3 \
+          --bind unix:/run/gunicorn.sock \
+          backend.asgi:application
+
+[Install]
+WantedBy=multi-user.target
+
+--------------------------------------------------
+
+http://skillbridge.store/
+
+source myprojectenv/bin/activate
+cd SkillBridge-Backend
+
+
+server {
+    listen 80;
+    server_name learning.toeman.online www.learning.toeman.online;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location /static/ {
+        root /home/ubuntu/SkillBridge-Backend;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.sock;
+    }
+}
+
+
+
+
+
+myprojectenv
+
+
+
+
+
+[Unit]
+Description=Daphne ASGI Server
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/SkillBridge-Backend
+ExecStart=/home/ubuntu/myprojectenv/bin/daphne insyncbackend.asgi:application --port 8001
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+const baseURL = "https://skillbridge.store";
+
+
+
+
+
+
+sudo systemctl daemon-reload
+sudo systemctl restart gunicorn
+sudo systemctl restart nginx
